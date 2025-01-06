@@ -7,7 +7,6 @@ class functions extends Module {
     val aluOp = Output(UInt(32.W))
     val imm = Output(SInt(32.W))
     val instrType = Output(UInt(4.W))
-
-    })
+    
   })
 }
