@@ -1,4 +1,4 @@
-import chisel3._
+/*import chisel3._
 import chisel3.util._
 
 class functions extends Module {
@@ -7,6 +7,10 @@ class functions extends Module {
     val aluOp = Output(UInt(32.W))
     val imm = Output(SInt(32.W))
     val instrType = Output(UInt(4.W))
-    
   })
-}
+
+  def opcodeSwitch(opcode: UInt, r1: UInt, r2: UInt, rd: UInt) = {
+
+  }
+
+}*/

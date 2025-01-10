@@ -3,3 +3,5 @@
 /target
 /.bsp
 /.idea
+.DS_Store
+/test_run_dir
