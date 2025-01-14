@@ -70,7 +70,7 @@ class decode extends Module {
       io.rs2 := io.instr(24,20)
       var temp = (io.instr(31) ## io.instr(7) ## io.instr(30,25) ## io.instr(11,8) ## 0.U(1.W).asUInt)
       io.imm := temp(11,0).asUInt
-      printf("instr: %x \n func3: %x, rs1: %x, rs2: %x, imm: %x and it is: %x\n", io.instr ,io.func3,io.rs1 ,io.rs2 ,io.imm.asSInt, (io.instr(31) ## io.instr(7) ## io.instr(30,25) ## io.instr(11,8) ## 0.U(1.W).asUInt))
+      /*printf("instr: %x \n func3: %x, rs1: %x, rs2: %x, imm: %x and it is: %x\n", io.instr ,io.func3,io.rs1 ,io.rs2 ,io.imm.asSInt, (io.instr(31) ## io.instr(7) ## io.instr(30,25) ## io.instr(11,8) ## 0.U(1.W).asUInt))*/
     }
     is(0x67.U){ /* I-type (JALR) */
       io.rd := io.instr(11,7)

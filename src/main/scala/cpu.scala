@@ -15,6 +15,7 @@ class decodedInstr extends Bundle {
   val imm = UInt(12.W)
   val imm20 = UInt(20.W)
   val pc = UInt(32.W)
+  val valid = Bool()
 }
 
 class cpu extends Module {
@@ -34,6 +35,7 @@ class cpu extends Module {
     val regData = UInt(32.W)
     val memData = UInt(32.W)
     val Addr = UInt(32.W)
+    val writeEnable = Bool()
   }
   val InstrcutionMem = VecInit(fetch.readBin("binfiles/branchcnt.bin").toIndexedSeq.map(_.S(32.W).asUInt))
   /*def getProgramFix() = InstrcutionMem*/
@@ -43,6 +45,9 @@ class cpu extends Module {
   val decOut = Wire(new decodedInstr())
 
   val exe = Module(new execution())
+  val decExReg = RegInit(0.U.asTypeOf(decOut))
+  val memReg = RegInit(0.U.asTypeOf(memBundle))
+  val wbReg = RegInit(0.U.asTypeOf(memBundle))
 
   val doBranch = WireDefault(false.B)
   val branchTarget = WireDefault(0.U)
@@ -50,7 +55,6 @@ class cpu extends Module {
   val pcReg = RegInit(0.U(32.W).asUInt)
   val pcNext = Mux(doBranch, branchTarget, pcReg + 4.U)
   pcReg := pcNext
-
 
   val instr = InstrcutionMem(pcReg(31,2))
 
@@ -75,15 +79,18 @@ class cpu extends Module {
   decOut.imm := decoder.io.imm
   decOut.imm20 := decoder.io.imm20
   decOut.pc := pcRegReg
+  decOut.valid := !doBranch
 
   /*printf("Decode =instr: %x, opcode: %x |",instrReg, decOut.opcode)*/
   /*printf("(dec): rs1(%x) = %d, rs2(%x) = %d\n",decOut.rs1,reg(decOut.rs1),decOut.rs2,reg(decOut.rs2))*/
-  val decExReg = RegInit(0.U.asTypeOf(decOut))
   decExReg := decOut
 
   exe.io.opcode := decExReg.opcode
-  exe.io.rs1 := reg(decExReg.rs1)
-  exe.io.rs2 := reg(decExReg.rs2)
+  exe.io.rs1 := Mux(memReg.rd === decExReg.rs1, memReg.regData,
+    Mux(wbReg.rd === decExReg.rs1, wbReg.regData,reg(decExReg.rs1)))
+  exe.io.rs2 := Mux(memReg.rd === decExReg.rs2, memReg.regData,
+    Mux(wbReg.rd === decExReg.rs2, wbReg.regData,reg(decExReg.rs2)))
+  //printf("rs1 = %d\n rs2 = %d\n", exe.io.rs1,exe.io.rs2)
   exe.io.rd := decExReg.rd
   exe.io.func3 := decExReg.func3
   exe.io.func10 := decExReg.func10
@@ -91,7 +98,7 @@ class cpu extends Module {
   exe.io.imm20 := decExReg.imm20
 
   branchTarget := (decExReg.pc.asSInt + decExReg.imm.asSInt).asUInt
-  doBranch := exe.io.branch
+  doBranch := exe.io.branch && decExReg.valid
   when(doBranch){
     printf("Branch Target: %x | pc: %x | imm : %x | opcode: %x\n",branchTarget,decExReg.pc.asSInt,decExReg.imm.asSInt,(decExReg.imm(11) ## decExReg.imm(10,5) ## decExReg.rs2 ## decExReg.rs1 ## decExReg.func3 ## decExReg.imm(4,1) ## decExReg.imm(11) ## decExReg.opcode))
   }
@@ -99,23 +106,23 @@ class cpu extends Module {
   /*printf("(exe): rs1(%x) = %d, rs2(%x) = %d\n",decExReg.rs1,reg(decExReg.rs1),decExReg.rs2,reg(decExReg.rs2))*/
 
   /*printf("exe = opcode: %x, %x + %x = %x |",decExReg.opcode, reg(decExReg.rs1),reg(decExReg.rs2),reg(decExReg.rd))*/
-  val memReg = RegInit(0.U.asTypeOf(memBundle))
   memReg.regData := exe.io.res
   memReg.rd := exe.io.rd
   memReg.Addr := decoder.io.rs1 + decoder.io.imm
+  memReg.writeEnable := decExReg.valid && (decExReg.func3 === 0x23.U)
 
   DataMem.io.DataIn := memReg.regData
   DataMem.io.rd := memReg.rd
   DataMem.io.Addr := memReg.Addr
+  DataMem.io.Write := memReg.writeEnable
 
   /*printf("mem = memReg: %x\n",DataMem.io.DataOut)*/
-  val wbReg = RegInit(0.U.asTypeOf(memBundle))
   wbReg.rd := memReg.rd
   wbReg.regData := memReg.regData
   wbReg.memData := DataMem.io.DataOut
 
   reg(wbReg.rd) := wbReg.regData
-
+  printf("x%d = %x\n",wbReg.rd, wbReg.regData)
   io.test := reg(10)
   io.test2 := reg(11)
   io.test3 := reg(12)

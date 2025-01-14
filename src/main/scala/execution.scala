@@ -119,10 +119,27 @@ class execution extends Module {
     branch
   }
 
+  def StoreInstr(func3: UInt, rs1: UInt, rs2: UInt, imm: UInt): UInt = {
+    val writeData = Wire(UInt(32.W))
+    writeData := 0.U
+    switch(func3){
+      is(0x00.U){ /* sb */
+        writeData := 0.U
+      }
+      is(0x01.U){ /* sh */
+        writeData := 0.U
+      }
+      is(0x02.U){ /* sw */
+        writeData := 0.U
+      }
+    }
+    writeData
+  }
+
   io.res := 0.U
   io.branch := false.B
   switch(io.opcode) {
-    is(0x03.U) {/* I-type */
+    is(0x03.U) {/* I-type (Load)*/
       io.res := IType(io.func3, io.rs1, io.imm)
     }
     is(0x13.U) {/* I-type */
@@ -132,7 +149,7 @@ class execution extends Module {
       io.res := 0.U
     }
     is(0x23.U) {/* S-type (SB, SH, SW) */
-      io.res := 0.U
+      io.res := StoreInstr(io.func3, io.rs1, io.rs2, io.imm)
     }
     is(0x6F.U) {/* J-type (JAL) */
       io.res := 0.U
@@ -149,9 +166,11 @@ class execution extends Module {
     }
     is(0x67.U) {/* I-type (JALR) */
       io.res := 0.U
-    } /*is(0x73.U){ /* Ecall & Ebreak */
-
-    }*/
+    }
+    is(0x73.U){ /* Ecall & Ebreak */
+      //io.res := 0.U
+      printf("Ecall got damn\n")
+    }
   }
 
 }
