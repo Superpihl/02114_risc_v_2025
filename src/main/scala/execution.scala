@@ -15,6 +15,8 @@ class execution extends Module {
     val imm20 = Input(UInt(20.W))
     val res = Output(UInt(32.W))
     val branch = Output(Bool())
+    val memLen = Output(UInt(2.W))
+    val sign = Output(Bool())
   })
 
   def RType(func10: UInt, rs1: UInt, rs2: UInt): UInt = {
@@ -62,7 +64,8 @@ class execution extends Module {
     res := 0.U
     switch(func3) {
       is(0x00.U) {/* addi */
-        res := rs1 + imm
+        res := (rs1.asSInt + imm.asSInt).asUInt
+        printf("%x(rs1) + %x(imm) = %x(res)\n", rs1,imm.asSInt,res)
       }
       is(0x02.U) {/* slti */
         res := (rs1.asSInt < imm.asSInt).asUInt
@@ -119,28 +122,32 @@ class execution extends Module {
     branch
   }
 
-  def StoreInstr(func3: UInt, rs1: UInt, rs2: UInt, imm: UInt): UInt = {
-    val writeData = Wire(UInt(32.W))
-    writeData := 0.U
-    switch(func3){
-      is(0x00.U){ /* sb */
-        writeData := 0.U
-      }
-      is(0x01.U){ /* sh */
-        writeData := 0.U
-      }
-      is(0x02.U){ /* sw */
-        writeData := 0.U
-      }
-    }
-    writeData
-  }
-
   io.res := 0.U
   io.branch := false.B
+  io.memLen := 0.U
+  io.sign := false.B
   switch(io.opcode) {
     is(0x03.U) {/* I-type (Load)*/
-      io.res := IType(io.func3, io.rs1, io.imm)
+      io.res := io.rs1 + io.imm
+      switch(io.func3){
+        is(0x00.U){
+          io.memLen := 1.U
+        }
+        is(0x01.U){
+          io.memLen := 2.U
+        }
+        is(0x02.U){
+          io.memLen := 3.U
+        }
+        is(0x04.U){
+          io.memLen := 1.U
+          io.sign := true.B
+        }
+        is(0x05.U){
+          io.memLen := 2.U
+          io.sign := true.B
+        }
+      }
     }
     is(0x13.U) {/* I-type */
       io.res := IType(io.func3, io.rs1, io.imm)
@@ -149,7 +156,21 @@ class execution extends Module {
       io.res := 0.U
     }
     is(0x23.U) {/* S-type (SB, SH, SW) */
-      io.res := StoreInstr(io.func3, io.rs1, io.rs2, io.imm)
+      switch(io.func3){
+        is(0x00.U){ /* sb */
+          io.res := io.rs2(7,0)
+          io.memLen := 1.U
+        }
+        is(0x01.U){ /* sh */
+          io.res := io.rs2(15,0)
+          io.memLen := 2.U
+        }
+        is(0x02.U){ /* sw */
+          io.res := io.rs2
+          io.memLen := 3.U
+        }
+      }
+      printf("Length = %d\n",io.memLen)
     }
     is(0x6F.U) {/* J-type (JAL) */
       io.res := 0.U
@@ -159,7 +180,8 @@ class execution extends Module {
       /*printf("%d + %d = %d\n",io.rs1,io.rs2,io.res)*/
     }
     is(0x37.U) {/* U-type (LUI) */
-      io.res := 0.U
+      //printf("res = %x\n",io.imm20 << 12)
+      io.res := io.imm20 << 12
     }
     is(0x63.U) {/* B-type */
       io.branch := BType(io.func3, io.rs1, io.rs2)

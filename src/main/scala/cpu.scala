@@ -7,8 +7,8 @@ import RISCVsim.fetch._
 
 class decodedInstr extends Bundle {
   val opcode = UInt(7.W)
-  val rs1 = UInt(5.W)
-  val rs2 = UInt(5.W)
+  val rs1 = UInt(32.W)
+  val rs2 = UInt(32.W)
   val rd = UInt(5.W)
   val func3 = UInt(3.W)
   val func10 = UInt(10.W)
@@ -16,6 +16,7 @@ class decodedInstr extends Bundle {
   val imm20 = UInt(20.W)
   val pc = UInt(32.W)
   val valid = Bool()
+  //val mem = Bool()
 }
 
 class cpu extends Module {
@@ -24,20 +25,28 @@ class cpu extends Module {
     val test = Output(UInt(32.W))
     val test2 = Output(UInt(32.W))
     val test3 = Output(UInt(32.W))
+    val test4 = Output(UInt(32.W))
+    val test5 = Output(UInt(32.W))
+    val test6 = Output(UInt(32.W))
+    val test7 = Output(UInt(32.W))
+    val test8 = Output(UInt(32.W))
+    val test9 = Output(UInt(32.W))
   })
 
   val reg = RegInit(VecInit(Seq.fill(32)(0.U(32.W)))) /* SyncReadMem(32, UInt(32.W)) */
 
   val DataMem = Module(new memory())
-  DataMem.io.Write := false.B
+  DataMem.io.Length := 0.U
   val memBundle = new Bundle() {
     val rd = UInt(5.W)
     val regData = UInt(32.W)
     val memData = UInt(32.W)
     val Addr = UInt(32.W)
-    val writeEnable = Bool()
+    val Len = UInt(2.W)
+    val memWr = Bool()
+    var sign = Bool()
   }
-  val InstrcutionMem = VecInit(fetch.readBin("binfiles/branchcnt.bin").toIndexedSeq.map(_.S(32.W).asUInt))
+  val InstrcutionMem = VecInit(fetch.readBin("binfiles/width.bin").toIndexedSeq.map(_.S(32.W).asUInt))
   /*def getProgramFix() = InstrcutionMem*/
   /*val InstrcutionMem = RegInit(0.U.asTypeOf(decOut))*/
   /*printf("mem: %x\n",InstrcutionMem(6))*/
@@ -80,6 +89,7 @@ class cpu extends Module {
   decOut.imm20 := decoder.io.imm20
   decOut.pc := pcRegReg
   decOut.valid := !doBranch
+  //decOut.mem := decoder.io.mem
 
   /*printf("Decode =instr: %x, opcode: %x |",instrReg, decOut.opcode)*/
   /*printf("(dec): rs1(%x) = %d, rs2(%x) = %d\n",decOut.rs1,reg(decOut.rs1),decOut.rs2,reg(decOut.rs2))*/
@@ -90,7 +100,7 @@ class cpu extends Module {
     Mux(wbReg.rd === decExReg.rs1, wbReg.regData,reg(decExReg.rs1)))
   exe.io.rs2 := Mux(memReg.rd === decExReg.rs2, memReg.regData,
     Mux(wbReg.rd === decExReg.rs2, wbReg.regData,reg(decExReg.rs2)))
-  //printf("rs1 = %d\n rs2 = %d\n", exe.io.rs1,exe.io.rs2)
+  printf("rs1 = %d\n rs2 = %d\n", exe.io.rs1,exe.io.rs2)
   exe.io.rd := decExReg.rd
   exe.io.func3 := decExReg.func3
   exe.io.func10 := decExReg.func10
@@ -108,24 +118,45 @@ class cpu extends Module {
   /*printf("exe = opcode: %x, %x + %x = %x |",decExReg.opcode, reg(decExReg.rs1),reg(decExReg.rs2),reg(decExReg.rd))*/
   memReg.regData := exe.io.res
   memReg.rd := exe.io.rd
-  memReg.Addr := decoder.io.rs1 + decoder.io.imm
-  memReg.writeEnable := decExReg.valid && (decExReg.func3 === 0x23.U)
-
+  memReg.Addr := exe.io.rs1 + exe.io.imm
+  memReg.memWr := ((exe.io.memLen > 0.U) & (exe.io.opcode === 0x23.U))
+  memReg.Len :=  Mux(decExReg.valid,exe.io.memLen,0.U)
+  memReg.sign := exe.io.sign
+  /*when(memReg.writeLen > 0.U){
+    printf("%x(addr) + %x(imm) = %d\n",exe.io.rs1,exe.io.imm,exe.io.res)
+  }*/
+    //printf("this: %d and (%d = %d\n",decExReg.valid,decExReg.opcode, 0x23.U)
+  //memReg.mem := decExReg.mem
   DataMem.io.DataIn := memReg.regData
   DataMem.io.rd := memReg.rd
   DataMem.io.Addr := memReg.Addr
-  DataMem.io.Write := memReg.writeEnable
+  DataMem.io.Length := memReg.Len
+  DataMem.io.memWr := memReg.memWr
+  DataMem.io.sign := memReg.sign
 
-  /*printf("mem = memReg: %x\n",DataMem.io.DataOut)*/
-  wbReg.rd := memReg.rd
-  wbReg.regData := memReg.regData
+  //printf("mem = memReg: %x\n",DataMem.io.DataOut)
+  wbReg := memReg
   wbReg.memData := DataMem.io.DataOut
 
-  reg(wbReg.rd) := wbReg.regData
-  printf("x%d = %x\n",wbReg.rd, wbReg.regData)
-  io.test := reg(10)
-  io.test2 := reg(11)
-  io.test3 := reg(12)
+  when((wbReg.Len > 0.U) & !wbReg.memWr){
+    reg(wbReg.rd) := wbReg.memData
+    //printf("MemData Loaded = reg(%d) = %x\n",wbReg.rd,wbReg.memData)
+  }.otherwise{
+    reg(wbReg.rd) := wbReg.regData
+    //printf("RegData Loaded = reg(%d) = %x\n",wbReg.rd,wbReg.regData)
+  }
+  //printf("x%d = %x\n",wbReg.rd, wbReg.regData)
+  //printf("fail at %d\n", reg(wbReg.rd))
+  io.test := reg(5)
+  //printf("io.test = %d\n",io.test)
+  io.test2 := reg(6)
+  io.test3 := reg(11)
+  io.test4 := reg(12)
+  io.test5 := reg(13)
+  io.test6 := reg(14)
+  io.test7 := reg(15)
+  io.test8 := reg(16)
+  io.test9 := reg(17)
 }
 
 object VendingMachine extends App {
