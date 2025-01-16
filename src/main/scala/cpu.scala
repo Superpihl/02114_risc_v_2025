@@ -96,16 +96,21 @@ class cpu extends Module {
   decExReg := decOut
 
   exe.io.opcode := decExReg.opcode
+
+  //printf("decExRS1 = %d (%x)\nmemRD = %d\nwbRD = %d\n",decExReg.rs1,reg(decExReg.rs1),memReg.rd,wbReg.rd)
+
   exe.io.rs1 := Mux(memReg.rd === decExReg.rs1, memReg.regData,
     Mux(wbReg.rd === decExReg.rs1, wbReg.regData,reg(decExReg.rs1)))
   exe.io.rs2 := Mux(memReg.rd === decExReg.rs2, memReg.regData,
     Mux(wbReg.rd === decExReg.rs2, wbReg.regData,reg(decExReg.rs2)))
-  printf("rs1 = %d\n rs2 = %d\n", exe.io.rs1,exe.io.rs2)
+  //printf("rs1 = %d\n rs2 = %d\n", exe.io.rs1,exe.io.rs2)
   exe.io.rd := decExReg.rd
   exe.io.func3 := decExReg.func3
   exe.io.func10 := decExReg.func10
   exe.io.imm := decExReg.imm
   exe.io.imm20 := decExReg.imm20
+
+  //printf("res = %d\n",exe.io.res)
 
   branchTarget := (decExReg.pc.asSInt + decExReg.imm.asSInt).asUInt
   doBranch := exe.io.branch && decExReg.valid
@@ -141,7 +146,7 @@ class cpu extends Module {
   when((wbReg.Len > 0.U) & !wbReg.memWr){
     reg(wbReg.rd) := wbReg.memData
     //printf("MemData Loaded = reg(%d) = %x\n",wbReg.rd,wbReg.memData)
-  }.otherwise{
+  }.elsewhen(!wbReg.memWr){
     reg(wbReg.rd) := wbReg.regData
     //printf("RegData Loaded = reg(%d) = %x\n",wbReg.rd,wbReg.regData)
   }
