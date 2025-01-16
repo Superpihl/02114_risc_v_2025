@@ -8,6 +8,18 @@ class decodeTest extends AnyFlatSpec with ChiselScalatestTester {
   "Decoder" should "pass" in {
     test(new cpu).withAnnotations(Seq(WriteVcdAnnotation)) { dut =>
       println("damn")
+      dut.clock.setTimeout(3000)
+      dut.clock.step(500)
+
+      dut.io.test1.expect(0x8.U)
+      dut.io.test2.expect(0x100000.U)
+      dut.io.test3.expect(0x10000000.U)
+      dut.io.test10.expect(0x65.U)
+      dut.io.test15.expect(0x65.U)
+      dut.io.test17.expect(0xa.U)
+      
+      /* width.bin
+      
       dut.clock.step(4)
       dut.io.test.expect(0.U)
       dut.io.test2.expect(0.U)
@@ -39,7 +51,7 @@ class decodeTest extends AnyFlatSpec with ChiselScalatestTester {
       dut.io.test6.expect(0x000000ab.U)
       dut.io.test7.expect(0x0000efab.U)
       dut.io.test8.expect("b10101011111011111010101110101011".U)
-      dut.io.test9.expect(0x0000000a.U)
+      dut.io.test9.expect(0x0000000a.U)*/
 
     }
   }

@@ -56,7 +56,7 @@ class decode extends Module {
     }
     is(0x6F.U){ /* J-type (JAL) */
       io.rd := io.instr(11,7)
-      io.imm := io.instr(31,31) ## io.instr(21,12) ## io.instr(22,22) ## io.instr(30,23)
+      io.imm := io.instr(31) ## io.instr(19,12) ## io.instr(20) ## io.instr(30,21) ## 0.U(1.W).asUInt
     }
     is(0x33.U){ /* R-type */
       io.rd := io.instr(11,7)

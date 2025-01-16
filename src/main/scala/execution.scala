@@ -13,6 +13,7 @@ class execution extends Module {
     val func10 = Input(UInt(10.W))
     val imm = Input(UInt(12.W))
     val imm20 = Input(UInt(20.W))
+    val pc = Input(UInt(32.W))
     val res = Output(UInt(32.W))
     val branch = Output(Bool())
     val memLen = Output(UInt(2.W))
@@ -65,7 +66,7 @@ class execution extends Module {
     switch(func3) {
       is(0x00.U) {/* addi */
         res := (rs1.asSInt + imm.asSInt).asUInt
-        printf("%x(rs1) + %x(imm) = %x(res)\n", rs1,imm.asSInt,res)
+        //printf("%x(rs1) + %x(imm) = %x(res)\n", rs1,imm.asSInt,res)
       }
       is(0x02.U) {/* slti */
         res := (rs1.asSInt < imm.asSInt).asUInt
@@ -170,10 +171,11 @@ class execution extends Module {
           io.memLen := 3.U
         }
       }
-      printf("Length = %d\n",io.memLen)
+      //printf("Length = %d\n",io.memLen)
     }
     is(0x6F.U) {/* J-type (JAL) */
-      io.res := 0.U
+      io.res := io.pc + 4.U
+      io.branch := true.B
     }
     is(0x33.U) {/* R-type */
       io.res := RType(io.func10, io.rs1, io.rs2)
@@ -187,7 +189,8 @@ class execution extends Module {
       io.branch := BType(io.func3, io.rs1, io.rs2)
     }
     is(0x67.U) {/* I-type (JALR) */
-      io.res := 0.U
+      io.res := io.pc + 4.U
+      io.branch := true.B
     }
     is(0x73.U){ /* Ecall & Ebreak */
       //io.res := 0.U

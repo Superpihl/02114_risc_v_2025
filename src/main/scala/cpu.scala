@@ -22,15 +22,12 @@ class decodedInstr extends Bundle {
 class cpu extends Module {
   val io = IO(new Bundle {
     /*val instruct = Input(UInt(32.W))*/
-    val test = Output(UInt(32.W))
+    val test1 = Output(UInt(32.W))
     val test2 = Output(UInt(32.W))
     val test3 = Output(UInt(32.W))
-    val test4 = Output(UInt(32.W))
-    val test5 = Output(UInt(32.W))
-    val test6 = Output(UInt(32.W))
-    val test7 = Output(UInt(32.W))
-    val test8 = Output(UInt(32.W))
-    val test9 = Output(UInt(32.W))
+    val test10 = Output(UInt(32.W))
+    val test15 = Output(UInt(32.W))
+    val test17 = Output(UInt(32.W))
   })
 
   val reg = RegInit(VecInit(Seq.fill(32)(0.U(32.W)))) /* SyncReadMem(32, UInt(32.W)) */
@@ -46,7 +43,7 @@ class cpu extends Module {
     val memWr = Bool()
     var sign = Bool()
   }
-  val InstrcutionMem = VecInit(fetch.readBin("binfiles/width.bin").toIndexedSeq.map(_.S(32.W).asUInt))
+  val InstrcutionMem = VecInit(fetch.readBin("binfiles/recursive.bin").toIndexedSeq.map(_.S(32.W).asUInt))
   /*def getProgramFix() = InstrcutionMem*/
   /*val InstrcutionMem = RegInit(0.U.asTypeOf(decOut))*/
   /*printf("mem: %x\n",InstrcutionMem(6))*/
@@ -109,13 +106,14 @@ class cpu extends Module {
   exe.io.func10 := decExReg.func10
   exe.io.imm := decExReg.imm
   exe.io.imm20 := decExReg.imm20
+  exe.io.pc := decExReg.pc
 
   //printf("res = %d\n",exe.io.res)
 
-  branchTarget := (decExReg.pc.asSInt + decExReg.imm.asSInt).asUInt
+  branchTarget := Mux(exe.io.opcode === 0x67.U,(decExReg.rs1.asSInt + decExReg.imm.asSInt).asUInt,(decExReg.pc.asSInt + decExReg.imm.asSInt).asUInt)
   doBranch := exe.io.branch && decExReg.valid
   when(doBranch){
-    printf("Branch Target: %x | pc: %x | imm : %x | opcode: %x\n",branchTarget,decExReg.pc.asSInt,decExReg.imm.asSInt,(decExReg.imm(11) ## decExReg.imm(10,5) ## decExReg.rs2 ## decExReg.rs1 ## decExReg.func3 ## decExReg.imm(4,1) ## decExReg.imm(11) ## decExReg.opcode))
+    printf("Branch Target: %x | pc: %x | imm : %x\n",branchTarget,decExReg.pc.asSInt,decExReg.imm.asSInt)
   }
 
   /*printf("(exe): rs1(%x) = %d, rs2(%x) = %d\n",decExReg.rs1,reg(decExReg.rs1),decExReg.rs2,reg(decExReg.rs2))*/
@@ -152,16 +150,12 @@ class cpu extends Module {
   }
   //printf("x%d = %x\n",wbReg.rd, wbReg.regData)
   //printf("fail at %d\n", reg(wbReg.rd))
-  io.test := reg(5)
-  //printf("io.test = %d\n",io.test)
-  io.test2 := reg(6)
-  io.test3 := reg(11)
-  io.test4 := reg(12)
-  io.test5 := reg(13)
-  io.test6 := reg(14)
-  io.test7 := reg(15)
-  io.test8 := reg(16)
-  io.test9 := reg(17)
+  io.test1 := reg(1)
+  io.test2 := reg(2)
+  io.test3 := reg(3)
+  io.test10 := reg(10)
+  io.test15 := reg(15)
+  io.test17 := reg(17)
 }
 
 object VendingMachine extends App {
