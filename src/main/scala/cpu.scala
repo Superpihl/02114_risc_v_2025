@@ -25,6 +25,7 @@ class cpu extends Module {
     val test1 = Output(UInt(32.W))
     val test2 = Output(UInt(32.W))
     val test3 = Output(UInt(32.W))
+    val test8 = Output(UInt(32.W))
     val test10 = Output(UInt(32.W))
     val test15 = Output(UInt(32.W))
     val test17 = Output(UInt(32.W))
@@ -54,6 +55,7 @@ class cpu extends Module {
   val decExReg = RegInit(0.U.asTypeOf(decOut))
   val memReg = RegInit(0.U.asTypeOf(memBundle))
   val wbReg = RegInit(0.U.asTypeOf(memBundle))
+  val wbData = WireDefault(0.U)
 
   val doBranch = WireDefault(false.B)
   val branchTarget = WireDefault(0.U)
@@ -66,7 +68,8 @@ class cpu extends Module {
 
   val pcRegReg = RegNext(pcReg)
 
-  printf("Fetch = pc: %x, instr: %x |\n",pcReg,instr)
+  //printf("pc = %x , instr = %x\n",pcReg,instr)
+  printf("%x ",pcReg)
 
   val instrReg = RegInit(0x00000033.U)
   instrReg := Mux(doBranch, 0x00000033.U, instr)
@@ -97,9 +100,9 @@ class cpu extends Module {
   //printf("decExRS1 = %d (%x)\nmemRD = %d\nwbRD = %d\n",decExReg.rs1,reg(decExReg.rs1),memReg.rd,wbReg.rd)
 
   exe.io.rs1 := Mux(memReg.rd === decExReg.rs1, memReg.regData,
-    Mux(wbReg.rd === decExReg.rs1, wbReg.regData,reg(decExReg.rs1)))
+    Mux(wbReg.rd === decExReg.rs1, wbData,reg(decExReg.rs1)))
   exe.io.rs2 := Mux(memReg.rd === decExReg.rs2, memReg.regData,
-    Mux(wbReg.rd === decExReg.rs2, wbReg.regData,reg(decExReg.rs2)))
+    Mux(wbReg.rd === decExReg.rs2, wbData,reg(decExReg.rs2)))
   //printf("rs1 = %d\n rs2 = %d\n", exe.io.rs1,exe.io.rs2)
   exe.io.rd := decExReg.rd
   exe.io.func3 := decExReg.func3
@@ -113,14 +116,14 @@ class cpu extends Module {
   branchTarget := Mux(exe.io.opcode === 0x67.U,(decExReg.rs1.asSInt + decExReg.imm.asSInt).asUInt,(decExReg.pc.asSInt + decExReg.imm.asSInt).asUInt)
   doBranch := exe.io.branch && decExReg.valid
   when(doBranch){
-    printf("Branch Target: %x | pc: %x | imm : %x\n",branchTarget,decExReg.pc.asSInt,decExReg.imm.asSInt)
+    printf("\nBranch Target: %x | pc: %x | imm : %x\n",branchTarget,decExReg.pc.asSInt,decExReg.imm.asSInt)
   }
 
   /*printf("(exe): rs1(%x) = %d, rs2(%x) = %d\n",decExReg.rs1,reg(decExReg.rs1),decExReg.rs2,reg(decExReg.rs2))*/
 
   /*printf("exe = opcode: %x, %x + %x = %x |",decExReg.opcode, reg(decExReg.rs1),reg(decExReg.rs2),reg(decExReg.rd))*/
-  memReg.regData := exe.io.res
-  memReg.rd := exe.io.rd
+  memReg.regData := Mux(decExReg.valid,exe.io.res,0.U)
+  memReg.rd := Mux(decExReg.valid,exe.io.rd,0.U)
   memReg.Addr := exe.io.rs1 + exe.io.imm
   memReg.memWr := ((exe.io.memLen > 0.U) & (exe.io.opcode === 0x23.U))
   memReg.Len :=  Mux(decExReg.valid,exe.io.memLen,0.U)
@@ -141,18 +144,23 @@ class cpu extends Module {
   wbReg := memReg
   wbReg.memData := DataMem.io.DataOut
 
-  when((wbReg.Len > 0.U) & !wbReg.memWr){
-    reg(wbReg.rd) := wbReg.memData
-    //printf("MemData Loaded = reg(%d) = %x\n",wbReg.rd,wbReg.memData)
-  }.elsewhen(!wbReg.memWr){
-    reg(wbReg.rd) := wbReg.regData
-    //printf("RegData Loaded = reg(%d) = %x\n",wbReg.rd,wbReg.regData)
+  when(!wbReg.memWr){
+    when(wbReg.Len > 0.U){
+      wbData := wbReg.memData
+    }.otherwise{
+      wbData := wbReg.regData
+    }
+    reg(wbReg.rd) := wbData
+  }
+  when(wbReg.rd === 15.U){
+    printf("x15 = %x\n (%x(mem),%x(reg))\n",wbData,wbReg.memData,wbReg.regData)
   }
   //printf("x%d = %x\n",wbReg.rd, wbReg.regData)
   //printf("fail at %d\n", reg(wbReg.rd))
   io.test1 := reg(1)
   io.test2 := reg(2)
   io.test3 := reg(3)
+  io.test8 := reg(8)
   io.test10 := reg(10)
   io.test15 := reg(15)
   io.test17 := reg(17)
