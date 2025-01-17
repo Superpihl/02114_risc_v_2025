@@ -113,10 +113,15 @@ class cpu extends Module {
 
   //printf("res = %d\n",exe.io.res)
 
-  branchTarget := Mux(exe.io.opcode === 0x67.U,(decExReg.rs1.asSInt + decExReg.imm.asSInt).asUInt,(decExReg.pc.asSInt + decExReg.imm.asSInt).asUInt)
+  branchTarget := Mux(exe.io.opcode === 0x67.U,(decExReg.rs1.asSInt + decExReg.imm.asSInt).asUInt,(decExReg.pc.asSInt + Mux(exe.io.opcode === 0x17.U,decExReg.imm20.asSInt,decExReg.imm.asSInt)).asUInt)
+  
   doBranch := exe.io.branch && decExReg.valid
   when(doBranch){
     printf("\nBranch Target: %x | pc: %x | imm : %x\n",branchTarget,decExReg.pc.asSInt,decExReg.imm.asSInt)
+    /*printf("branchTarget = %x, also that branch target = %x\n",(decExReg.pc.asSInt + decExReg.imm.asSInt).asUInt, exe.io.res)
+    when(exe.io.opcode === 0x63.U){
+      printf("definitely a branch branch\n")
+    }*/
   }
 
   /*printf("(exe): rs1(%x) = %d, rs2(%x) = %d\n",decExReg.rs1,reg(decExReg.rs1),decExReg.rs2,reg(decExReg.rs2))*/

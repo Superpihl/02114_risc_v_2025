@@ -154,7 +154,8 @@ class execution extends Module {
       io.res := IType(io.func3, io.rs1, io.imm)
     }
     is(0x17.U) {/* U-type (AUIPC) */
-      io.res := 0.U
+      io.res := (io.pc.asSInt + io.imm20.asSInt).asUInt
+      io.branch := true.B
     }
     is(0x23.U) {/* S-type (SB, SH, SW) */
       switch(io.func3){
@@ -186,6 +187,7 @@ class execution extends Module {
       io.res := io.imm20 << 12
     }
     is(0x63.U) {/* B-type */
+      io.res := (io.pc.asSInt + io.imm.asSInt).asUInt
       io.branch := BType(io.func3, io.rs1, io.rs2)
     }
     is(0x67.U) {/* I-type (JALR) */
