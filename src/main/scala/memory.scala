@@ -12,14 +12,14 @@ class memory extends Module {
     val DataOut = Output(UInt(32.W))
   })
 
-  val DataMemory = RegInit(VecInit(Seq.fill(128)(0.U(8.W))))
+  val DataMemory = RegInit(VecInit(Seq.fill(128)(0.U(32.W))))
 
-  when(io.Write){
-    io.DataOut := io.DataIn
-    DataMemory(io.Addr) := io.DataIn
-  }.otherwise{
-    io.DataOut := DataMemory(io.Addr)
+  when(io.Write) {
+    // Write operation (word address)
+    DataMemory(io.Addr >> 2) := io.DataIn
   }
 
+  // Read operation (word address)
+  io.DataOut := DataMemory(io.Addr >> 2)
 
 }

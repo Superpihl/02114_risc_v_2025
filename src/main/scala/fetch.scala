@@ -29,6 +29,14 @@ object fetch {
    */
   def readBin(fileName: String): Array[Int] = {
     val byteArray = Files.readAllBytes(Paths.get(fileName))
-    byteToWord(byteArray)
+    byteArray.grouped(4).map { case Array(a, b, c, d) =>
+      ((a & 0xff) | ((b & 0xff) << 8) | ((c & 0xff) << 16) | ((d & 0xff) << 24)).toInt
+    }.toArray
+  }
+
+  def readBinAsUInt(fileName: String): Array[BigInt] = {
+    readBin(fileName).map { word =>
+      if (word < 0) BigInt(word & 0xFFFFFFFFL) else BigInt(word)
+    }
   }
 }

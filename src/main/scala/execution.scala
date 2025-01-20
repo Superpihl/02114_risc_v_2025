@@ -15,7 +15,10 @@ class execution extends Module {
     val imm20 = Input(UInt(20.W))
     val res = Output(UInt(32.W))
     val branch = Output(Bool())
+    val pc = Input(UInt(32.W))
+    val nextPC = Output(UInt(32.W))
   })
+  io.nextPC := 0.U
 
   def RType(func10: UInt, rs1: UInt, rs2: UInt): UInt = {
     val res = Wire(UInt(32.W))
@@ -119,57 +122,44 @@ class execution extends Module {
     branch
   }
 
-  def StoreInstr(func3: UInt, rs1: UInt, rs2: UInt, imm: UInt): UInt = {
-    val writeData = Wire(UInt(32.W))
-    writeData := 0.U
-    switch(func3){
-      is(0x00.U){ /* sb */
-        writeData := 0.U
-      }
-      is(0x01.U){ /* sh */
-        writeData := 0.U
-      }
-      is(0x02.U){ /* sw */
-        writeData := 0.U
-      }
-    }
-    writeData
-  }
+  def JAL(pc: UInt, imm: UInt): UInt = pc + imm.asSInt.asUInt
+  def JALR(rs1: UInt, imm: UInt): UInt = (rs1 + imm.asSInt.asUInt) & ~1.U
 
   io.res := 0.U
   io.branch := false.B
   switch(io.opcode) {
-    is(0x03.U) {/* I-type (Load)*/
+    is(0x03.U) {/* I-type */
       io.res := IType(io.func3, io.rs1, io.imm)
     }
     is(0x13.U) {/* I-type */
       io.res := IType(io.func3, io.rs1, io.imm)
     }
-    is(0x17.U) {/* U-type (AUIPC) */
-      io.res := 0.U
+    is(0x17.U) { // U-type (AUIPC)
+      io.res := io.nextPC + (io.imm20 << 12).asUInt
     }
     is(0x23.U) {/* S-type (SB, SH, SW) */
-      io.res := StoreInstr(io.func3, io.rs1, io.rs2, io.imm)
-    }
-    is(0x6F.U) {/* J-type (JAL) */
       io.res := 0.U
+    }
+    is(0x6F.U) { // J-type (JAL)
+      io.res := io.pc + 4.U
+      io.nextPC := JAL(io.pc, io.imm)
     }
     is(0x33.U) {/* R-type */
       io.res := RType(io.func10, io.rs1, io.rs2)
       /*printf("%d + %d = %d\n",io.rs1,io.rs2,io.res)*/
     }
-    is(0x37.U) {/* U-type (LUI) */
-      io.res := 0.U
+    is(0x37.U) { // U-type (LUI)
+      io.res := io.imm20 << 12
     }
     is(0x63.U) {/* B-type */
       io.branch := BType(io.func3, io.rs1, io.rs2)
     }
-    is(0x67.U) {/* I-type (JALR) */
-      io.res := 0.U
+    is(0x67.U) { // JALR
+      io.res := io.pc + 4.U
+      io.nextPC := JALR(io.rs1, io.imm)
     }
     is(0x73.U){ /* Ecall & Ebreak */
-      //io.res := 0.U
-      printf("Ecall got damn\n")
+
     }
   }
 
