@@ -13,12 +13,12 @@ class execution extends Module {
     val func10 = Input(UInt(10.W))
     val imm = Input(UInt(12.W))
     val imm20 = Input(UInt(20.W))
-    val pc = Input(UInt(32.W))
     val res = Output(UInt(32.W))
     val branch = Output(Bool())
-    val memLen = Output(UInt(2.W))
-    val sign = Output(Bool())
+    val pc = Input(UInt(32.W))
+    val nextPC = Output(UInt(32.W))
   })
+  io.nextPC := 0.U
 
   def RType(func10: UInt, rs1: UInt, rs2: UInt): UInt = {
     val res = Wire(UInt(32.W))
@@ -65,8 +65,7 @@ class execution extends Module {
     res := 0.U
     switch(func3) {
       is(0x00.U) {/* addi */
-        res := (rs1.asSInt + imm.asSInt).asUInt
-        //printf("%x(rs1) + %x(imm) = %x(res)\n", rs1,imm.asSInt,res)
+        res := rs1 + imm
       }
       is(0x02.U) {/* slti */
         res := (rs1.asSInt < imm.asSInt).asUInt
@@ -123,80 +122,44 @@ class execution extends Module {
     branch
   }
 
+  def JAL(pc: UInt, imm: UInt): UInt = pc + imm.asSInt.asUInt
+  def JALR(rs1: UInt, imm: UInt): UInt = (rs1 + imm.asSInt.asUInt) & ~1.U
+
   io.res := 0.U
   io.branch := false.B
-  io.memLen := 0.U
-  io.sign := false.B
   switch(io.opcode) {
-    is(0x03.U) {/* I-type (Load)*/
-      io.res := io.rs1 + io.imm
-      switch(io.func3){
-        is(0x00.U){
-          io.memLen := 1.U
-        }
-        is(0x01.U){
-          io.memLen := 2.U
-        }
-        is(0x02.U){
-          io.memLen := 3.U
-        }
-        is(0x04.U){
-          io.memLen := 1.U
-          io.sign := true.B
-        }
-        is(0x05.U){
-          io.memLen := 2.U
-          io.sign := true.B
-        }
-      }
+    is(0x03.U) {/* I-type */
+      io.res := IType(io.func3, io.rs1, io.imm)
     }
     is(0x13.U) {/* I-type */
       io.res := IType(io.func3, io.rs1, io.imm)
     }
-    is(0x17.U) {/* U-type (AUIPC) */
-      io.res := (io.pc.asSInt + io.imm20.asSInt).asUInt
-      io.branch := true.B
+    is(0x17.U) { // U-type (AUIPC)
+      io.res := io.nextPC + (io.imm20 << 12).asUInt
     }
     is(0x23.U) {/* S-type (SB, SH, SW) */
-      switch(io.func3){
-        is(0x00.U){ /* sb */
-          io.res := io.rs2(7,0)
-          io.memLen := 1.U
-        }
-        is(0x01.U){ /* sh */
-          io.res := io.rs2(15,0)
-          io.memLen := 2.U
-        }
-        is(0x02.U){ /* sw */
-          io.res := io.rs2
-          io.memLen := 3.U
-        }
-      }
-      //printf("Length = %d\n",io.memLen)
+      io.res := 0.U
     }
-    is(0x6F.U) {/* J-type (JAL) */
+    is(0x6F.U) { // J-type (JAL)
       io.res := io.pc + 4.U
-      io.branch := true.B
+      io.nextPC := JAL(io.pc, io.imm)
     }
     is(0x33.U) {/* R-type */
       io.res := RType(io.func10, io.rs1, io.rs2)
       /*printf("%d + %d = %d\n",io.rs1,io.rs2,io.res)*/
     }
-    is(0x37.U) {/* U-type (LUI) */
-      //printf("res = %x\n",io.imm20 << 12)
+    is(0x37.U) { // U-type (LUI)
       io.res := io.imm20 << 12
     }
     is(0x63.U) {/* B-type */
-      io.res := (io.pc.asSInt + io.imm.asSInt).asUInt
       io.branch := BType(io.func3, io.rs1, io.rs2)
     }
-    is(0x67.U) {/* I-type (JALR) */
+    is(0x67.U) { // JALR
       io.res := io.pc + 4.U
-      io.branch := true.B
+      io.nextPC := JALR(io.rs1, io.imm)
     }
     is(0x73.U){ /* Ecall & Ebreak */
-      //io.res := 0.U
-      printf("Ecall got damn\n")
+
     }
   }
 

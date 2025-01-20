@@ -13,7 +13,6 @@ class decode extends Module {
     val func10 = Output(UInt(10.W))
     val imm = Output(UInt(12.W))
     val imm20 = Output(UInt(20.W))
-    //val mem = Bool()
   })
 
   io.rs1 := 0.U
@@ -23,7 +22,6 @@ class decode extends Module {
   io.func10 := 0.U
   io.imm := 0.U
   io.imm20 := 0.U
-  //io.mem := false.B
 
 
   val opcode = io.instr(6,0)
@@ -34,7 +32,6 @@ class decode extends Module {
       io.func3 := io.instr(14,12)
       io.rs1 := io.instr(19,15)
       io.imm := io.instr(31,20)
-      //io.mem := true.B
     }
     is(0x13.U){ /* I-type */
       io.rd := io.instr(11,7)
@@ -50,13 +47,11 @@ class decode extends Module {
       io.func3 := io.instr(14,12)
       io.rs1 := io.instr(19,15)
       io.rs2 := io.instr(24,20)
-      io.imm := io.instr(31,25) ## io.instr(11,7)
-      //printf("decoded(imm) = %d\n",io.imm)
-      //io.mem := true.B
+      io.imm := io.instr(11,7) ## io.instr(31,25)
     }
     is(0x6F.U){ /* J-type (JAL) */
-      io.rd := io.instr(11,7)
-      io.imm := io.instr(31) ## io.instr(19,12) ## io.instr(20) ## io.instr(30,21) ## 0.U(1.W).asUInt
+      io.rd := io.instr(11, 7)
+      io.imm := Cat(io.instr(31), io.instr(19, 12), io.instr(20), io.instr(30, 21), 0.U(1.W)).asUInt
     }
     is(0x33.U){ /* R-type */
       io.rd := io.instr(11,7)
@@ -66,8 +61,8 @@ class decode extends Module {
       /*printf("func10: %x, rs1: %x, rs2: %x\n",io.func10,io.rs1,io.rs2)*/
     }
     is(0x37.U){ /* U-type (LUI) */
-      io.rd := io.instr(11,7)
-      io.imm20 := io.instr(31,12)
+      io.rd := io.instr(11, 7)
+      io.imm20 := io.instr(31, 12)
     }
     is(0x63.U){ /* B-type */
       io.func3 := io.instr(14,12)
@@ -75,7 +70,7 @@ class decode extends Module {
       io.rs2 := io.instr(24,20)
       var temp = (io.instr(31) ## io.instr(7) ## io.instr(30,25) ## io.instr(11,8) ## 0.U(1.W).asUInt)
       io.imm := temp(11,0).asUInt
-      /*printf("instr: %x \n func3: %x, rs1: %x, rs2: %x, imm: %x and it is: %x\n", io.instr ,io.func3,io.rs1 ,io.rs2 ,io.imm.asSInt, (io.instr(31) ## io.instr(7) ## io.instr(30,25) ## io.instr(11,8) ## 0.U(1.W).asUInt))*/
+      printf("instr: %x \n func3: %x, rs1: %x, rs2: %x, imm: %x and it is: %x\n", io.instr ,io.func3,io.rs1 ,io.rs2 ,io.imm.asSInt, (io.instr(31) ## io.instr(7) ## io.instr(30,25) ## io.instr(11,8) ## 0.U(1.W).asUInt))
     }
     is(0x67.U){ /* I-type (JALR) */
       io.rd := io.instr(11,7)
