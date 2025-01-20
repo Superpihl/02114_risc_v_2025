@@ -14,7 +14,7 @@ class memory extends Module {
     val sign = Input(Bool())
   })
 
-  val DataMemory = RegInit(VecInit(Seq.fill(256)(0.U(8.W))))
+  val DataMemory = RegInit(VecInit(Seq.fill(4096)(0.U(8.W))))
 
   val tempOut = VecInit(0.U(8.W),0.U(8.W),0.U(8.W),0.U(8.W))
 

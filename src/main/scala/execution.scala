@@ -196,7 +196,7 @@ class execution extends Module {
     }
     is(0x73.U){ /* Ecall & Ebreak */
       //io.res := 0.U
-      printf("Ecall got damn\n")
+      printf("\nEcall got damn\n")
     }
   }
 
