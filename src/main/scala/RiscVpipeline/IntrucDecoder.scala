@@ -55,51 +55,49 @@ class InstructionDecoder extends Module {
 
   // Decode instruction type based on opcode
   switch(io.decoded.aluOp) {
-    is("b0110011".U) { // R-type
-      io.decoded.instrType := 0.U // R-type
+    is(Opcode.Alu) { // R-type
+      io.decoded.instrType := InstrType.R.id.U // R-type
       io.decoded.rfWrite := true.B
-      io.decoded.rs1Valid := true.B
-      io.decoded.rs2Valid := true.B
     }
-    is("b0010011".U) { // I-type ALU
-      io.decoded.instrType := 1.U // I-type
+    is(Opcode.AluImm) { // I-type ALU
+      io.decoded.instrType := InstrType.I.id.U // I-type
       io.decoded.rfWrite := true.B
       io.decoded.isImm := true.B
     }
-    is("b0000011".U) { // Load
-      io.decoded.instrType := 1.U // I-type
+    is(Opcode.load) { // Load
+      io.decoded.instrType := InstrType.I.id.U // I-type
       io.decoded.rfWrite := true.B
       io.decoded.isLoad := true.B
       io.decoded.isImm := true.B
     }
-    is("b0100011".U) { // Store
-      io.decoded.instrType := 2.U // S-type
+    is(Opcode.store) { // Store
+      io.decoded.instrType := InstrType.S.id.U // S-type
       io.decoded.isStore := true.B
       io.decoded.isImm := true.B
     }
-    is("b1100011".U) { // Branch
-      io.decoded.instrType := 3.U // B-type
+    is(Opcode.branch) { // Branch
+      io.decoded.instrType := InstrType.B.id.U // B-type
       io.decoded.isBranch := true.B
       io.decoded.isImm := true.B
     }
-    is("b1101111".U) { // JAL
-      io.decoded.instrType := 4.U // J-type
+    is(Opcode.jal) { // JAL
+      io.decoded.instrType := InstrType.J.id.U // J-type
       io.decoded.rfWrite := true.B
       io.decoded.isJal := true.B
     }
-    is("b1100111".U) { // JALR
-      io.decoded.instrType := 1.U // I-type
+    is(Opcode.jalr) { // JALR
+      io.decoded.instrType := InstrType.I.id.U // I-type
       io.decoded.rfWrite := true.B
       io.decoded.isJalr := true.B
       io.decoded.isImm := true.B
     }
-    is("b0110111".U) { // LUI
-      io.decoded.instrType := 5.U // U-type
+    is(Opcode.lui) { // LUI
+      io.decoded.instrType := InstrType.U.id.U // U-type
       io.decoded.rfWrite := true.B
       io.decoded.isLui := true.B
     }
-    is("b0010111".U) { // AUIPC
-      io.decoded.instrType := 5.U // U-type
+    is(Opcode.auipc) { // AUIPC
+      io.decoded.instrType := InstrType.U.id.U // U-type
       io.decoded.rfWrite := true.B
       io.decoded.isAuiPc := true.B
     }
@@ -116,16 +114,4 @@ class InstructionDecoder extends Module {
     4.U -> Cat(Fill(12, io.instruction(31)), io.instruction(19, 12), io.instruction(20), io.instruction(30, 21), 0.U(1.W)), // J-type
     5.U -> Cat(io.instruction(31), io.instruction(30, 12), 0.U(12.W)) // U-type
   ))
-
-  // Determine ALU operation based on instruction type
-  io.decoded.aluOp := MuxLookup(io.decoded.instrType, 0.U, Array(
-    0.U -> "b000".U, // R-type ALU operation
-    1.U -> "b001".U, // I-type ALU operation
-    2.U -> "b010".U, // Load operation
-    3.U -> "b011".U, // Store operation
-    4.U -> "b100".U  // Branch operation
-  ))
 }
-
-
-
