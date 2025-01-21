@@ -9,18 +9,26 @@ class memory extends Module {
     val DataIn = Input(UInt(32.W))
     val Length = Input(UInt(2.W))
     val rd = Input(UInt(5.W))
-    val DataOut = Output(UInt(32.W))
     val memWr = Input(Bool())
     val sign = Input(Bool())
+
+    val DataOut = Output(UInt(32.W))
+    val hex = Output(UInt(16.W))
   })
 
-  val DataMemory = RegInit(VecInit(Seq.fill(4096)(0.U(8.W))))
+  val memSize = 256
 
-  val tempOut = VecInit(0.U(8.W),0.U(8.W),0.U(8.W),0.U(8.W))
+  val DataMemory = SyncReadMem(memSize, UInt(8.W)) /*RegInit(VecInit(Seq.fill(memSize)(0.U(8.W)))) */
+
+  val tempOut = VecInit(Seq.fill(4)(0.U(8.W)))
 
   when(0.U < io.Length){
     when(io.memWr){
-      DataMemory(io.Addr) := io.DataIn(7,0)
+      when(io.Addr >= memSize.U && io.Addr < (memSize+2).U){
+        io.hex((io.Addr-memSize.U)*8+7,(io.Addr-memSize.U)*8) := io.DataIn(7,0)
+      }.otherwise{
+        DataMemory(io.Addr) := io.DataIn(7,0)
+      }
       //printf("Write = mem(%d) = %x\n",io.Addr,io.DataIn)
     }.otherwise{
       tempOut(0) := DataMemory(io.Addr)
@@ -29,15 +37,23 @@ class memory extends Module {
   }
   when(1.U < io.Length){
     when(io.memWr){
-      DataMemory(io.Addr+1.U) := io.DataIn(15,8)
+      when((io.Addr+1.U) >= memSize.U && (io.Addr+1.U) < (memSize+2).U){
+        io.hex(((io.Addr+1.U)-memSize.U)*8+7,((io.Addr+1.U)-memSize.U)*8) := io.DataIn(15,8)
+      }.otherwise{
+        DataMemory(io.Addr+1.U) := io.DataIn(15,8)
+      }
     }.otherwise{
       tempOut(1) := DataMemory(io.Addr+1.U)
     }
   }
   when(2.U < io.Length){
     when(io.memWr){
-      DataMemory(io.Addr+2.U) := io.DataIn(23,16)
-      DataMemory(io.Addr+3.U) := io.DataIn(31,24)
+      when((io.Addr+2.U) === memSize.U){
+        io.hex(15,0) := io.DataIn(31,16)
+      }.otherwise{
+        DataMemory(io.Addr+2.U) := io.DataIn(23,16)
+        DataMemory(io.Addr+3.U) := io.DataIn(31,24)
+      }
     }.otherwise{
       tempOut(2) := DataMemory(io.Addr+2.U)
       tempOut(3) := DataMemory(io.Addr+3.U)

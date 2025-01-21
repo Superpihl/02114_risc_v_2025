@@ -40,9 +40,11 @@ class cpu extends Module {
     val test15 = Output(UInt(32.W))
     val test16 = Output(UInt(32.W))
     val test17 = Output(UInt(32.W))
+
+    val sevSegNum = Output(UInt(16.W))
   })
 
-  val reg = RegInit(VecInit(Seq.fill(32)(0.U(32.W)))) /* SyncReadMem(32, UInt(32.W)) */
+  val reg = SyncReadMem(32, UInt(32.W)) /*RegInit(VecInit(Seq.fill(32)(0.U(32.W)))) */
 
   val DataMem = Module(new memory())
   DataMem.io.Length := 0.U
@@ -56,7 +58,7 @@ class cpu extends Module {
     val sign = Bool()
     val valid = Bool()
   }
-  val InstrcutionMem = VecInit(fetch.readBin("binfiles/recursive(nopAfterLoad).bin").toIndexedSeq.map(_.S(32.W).asUInt))
+  val InstrcutionMem = VecInit(fetch.readBin("binfiles/LEDtest.bin").toIndexedSeq.map(_.S(32.W).asUInt))
   /*def getProgramFix() = InstrcutionMem*/
   /*val InstrcutionMem = RegInit(0.U.asTypeOf(decOut))*/
   /*printf("mem: %x\n",InstrcutionMem(6))*/
@@ -167,6 +169,7 @@ class cpu extends Module {
   //printf("mem = memReg: %x\n",DataMem.io.DataOut)
   wbReg := memReg
   wbReg.memData := DataMem.io.DataOut
+  io.sevSegNum := DataMem.io.hex
 
   /*when(wbReg.rd === 15.U){
     printf("regData(wb) = %x\n",wbReg.regData)
@@ -204,8 +207,4 @@ class cpu extends Module {
   io.test15 := reg(15)
   io.test16 := reg(16)
   io.test17 := reg(17)
-}
-
-object VendingMachine extends App {
-  (new chisel3.stage.ChiselStage).emitVerilog(new cpu())
 }
