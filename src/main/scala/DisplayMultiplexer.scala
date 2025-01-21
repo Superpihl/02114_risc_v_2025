@@ -1,7 +1,9 @@
+package RISCVsim
+
 import chisel3._
 import chisel3.util._
 
-class DisplayMultiplexer(maxCount: Int) extends Module {
+class DisplayMultiplexer() extends Module {
   val io = IO(new Bundle {
     val hex = Input(UInt(16.W))
     val seg = Output(UInt(7.W))

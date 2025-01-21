@@ -1,3 +1,5 @@
+package RISCVsim
+
 import chisel3._
 import chisel3.util._
 
@@ -12,15 +14,15 @@ class connection extends Module {
     val CPU = Module(new cpu())
     val SevenSeg = Module(new DisplayMultiplexer())
 
-    SevenSeg.io.in := CPU.io.sevSegNum
+    SevenSeg.io.hex := CPU.io.sevSegNum
 
-    io.seg := SevenSeg.io.out
+    io.seg := SevenSeg.io.seg
     io.an := SevenSeg.io.an
 
     io.led := io.sw
 
 }
 
-object VendingMachine extends App {
+object RISCV extends App {
   (new chisel3.stage.ChiselStage).emitVerilog(new cpu())
 }

@@ -21,11 +21,14 @@ class memory extends Module {
   val DataMemory = SyncReadMem(memSize, UInt(8.W)) /*RegInit(VecInit(Seq.fill(memSize)(0.U(8.W)))) */
 
   val tempOut = VecInit(Seq.fill(4)(0.U(8.W)))
+  val tempSeg = VecInit(Seq.fill(2)(0.U(8.W)))
 
   when(0.U < io.Length){
     when(io.memWr){
-      when(io.Addr >= memSize.U && io.Addr < (memSize+2).U){
-        io.hex((io.Addr-memSize.U)*8+7,(io.Addr-memSize.U)*8) := io.DataIn(7,0)
+      when(io.Addr === memSize.U){
+        tempSeg(0) := io.DataIn(7,0)
+      }.elsewhen((io.Addr) === (memSize+1).U){
+        tempSeg(1) := io.DataIn(7,0)
       }.otherwise{
         DataMemory(io.Addr) := io.DataIn(7,0)
       }
@@ -37,8 +40,10 @@ class memory extends Module {
   }
   when(1.U < io.Length){
     when(io.memWr){
-      when((io.Addr+1.U) >= memSize.U && (io.Addr+1.U) < (memSize+2).U){
-        io.hex(((io.Addr+1.U)-memSize.U)*8+7,((io.Addr+1.U)-memSize.U)*8) := io.DataIn(15,8)
+      when((io.Addr+1.U) === memSize.U){
+        tempSeg(0) := io.DataIn(15,8)
+      }.elsewhen((io.Addr+2.U) === memSize.U){
+        tempSeg(1) := io.DataIn(15,8)
       }.otherwise{
         DataMemory(io.Addr+1.U) := io.DataIn(15,8)
       }
@@ -49,7 +54,8 @@ class memory extends Module {
   when(2.U < io.Length){
     when(io.memWr){
       when((io.Addr+2.U) === memSize.U){
-        io.hex(15,0) := io.DataIn(31,16)
+        tempSeg(0) := io.DataIn(23,16)
+        tempSeg(1) := io.DataIn(31,24)
       }.otherwise{
         DataMemory(io.Addr+2.U) := io.DataIn(23,16)
         DataMemory(io.Addr+3.U) := io.DataIn(31,24)
@@ -59,6 +65,8 @@ class memory extends Module {
       tempOut(3) := DataMemory(io.Addr+3.U)
     }
   }
+
+  io.hex := tempSeg(1) ## tempSeg(0)
 
   when(io.Length === 1.U && !io.sign && (tempOut(0) & 0x80.U) === 0x80.U){
     io.DataOut := 0xFFFFFF.U ## tempOut(0)
