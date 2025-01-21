@@ -5,6 +5,8 @@ class connection extends Module {
     val io = IO(new Bundle {
         val seg = Output(UInt(7.W))
         val an = Output(UInt(4.W))
+        val sw = Input(UInt(4.W))
+        val led = Output(UInt(4.W))
     })
 
     val CPU = Module(new cpu())
@@ -14,6 +16,8 @@ class connection extends Module {
 
     io.seg := SevenSeg.io.out
     io.an := SevenSeg.io.an
+
+    io.led := io.sw
 
 }
 
