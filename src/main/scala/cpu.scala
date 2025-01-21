@@ -22,7 +22,7 @@ class decodedInstr extends Bundle {
 class cpu extends Module {
   val io = IO(new Bundle {
     /*val instruct = Input(UInt(32.W))*/
-    val test0 = Output(UInt(32.W))
+    /*val test0 = Output(UInt(32.W))
     val test1 = Output(UInt(32.W))
     val test2 = Output(UInt(32.W))
     val test3 = Output(UInt(32.W))
@@ -39,7 +39,7 @@ class cpu extends Module {
     val test14 = Output(UInt(32.W))
     val test15 = Output(UInt(32.W))
     val test16 = Output(UInt(32.W))
-    val test17 = Output(UInt(32.W))
+    val test17 = Output(UInt(32.W))*/
 
     val sevSegNum = Output(UInt(16.W))
   })
@@ -189,7 +189,7 @@ class cpu extends Module {
   }
   //printf("x%d = %x\n",wbReg.rd, wbReg.regData)
   //printf("fail at %d\n", reg(wbReg.rd))
-  io.test0 := reg(0)
+  /*io.test0 := reg(0)
   io.test1 := reg(1)
   io.test2 := reg(2)
   io.test3 := reg(3)
@@ -206,5 +206,5 @@ class cpu extends Module {
   io.test14 := reg(14)
   io.test15 := reg(15)
   io.test16 := reg(16)
-  io.test17 := reg(17)
+  io.test17 := reg(17)*/
 }

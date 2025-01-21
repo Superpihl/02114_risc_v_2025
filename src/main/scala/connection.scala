@@ -11,10 +11,10 @@ class connection extends Module {
         val led = Output(UInt(4.W))
     })
 
-    val CPU = Module(new cpu())
+    //val CPU = Module(new cpu())
     val SevenSeg = Module(new DisplayMultiplexer())
 
-    SevenSeg.io.hex := CPU.io.sevSegNum
+    SevenSeg.io.hex := 0x1234.U
 
     io.seg := SevenSeg.io.seg
     io.an := SevenSeg.io.an
@@ -24,5 +24,5 @@ class connection extends Module {
 }
 
 object RISCV extends App {
-  (new chisel3.stage.ChiselStage).emitVerilog(new cpu())
+  (new chisel3.stage.ChiselStage).emitVerilog(new connection())
 }
