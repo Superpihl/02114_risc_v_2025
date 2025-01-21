@@ -11,10 +11,15 @@ class connection extends Module {
         val led = Output(UInt(4.W))
     })
 
-    //val CPU = Module(new cpu())
-    val SevenSeg = Module(new DisplayMultiplexer())
+    val CPU = Module(new cpu())
+    val SevenSeg = Module(new DisplayMultiplexer(100000))
 
-    SevenSeg.io.hex := 0x1234.U
+    SevenSeg.io.hex := CPU.io.sevSegNum
+
+    SevenSeg.io.c2Full := io.sw(0)
+    SevenSeg.io.c5Full := io.sw(1)
+    SevenSeg.io.noCans := io.sw(2)
+    SevenSeg.io.iced := io.sw(3)
 
     io.seg := SevenSeg.io.seg
     io.an := SevenSeg.io.an
