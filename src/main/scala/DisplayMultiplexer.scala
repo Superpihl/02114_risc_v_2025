@@ -33,6 +33,7 @@ class DisplayMultiplexer(maxCount: Int) extends Module {
 
   val cntReg = RegInit(0.U(32.W))
   val outReg = RegInit(1.U(4.W))
+  val outReg2 = RegInit(0.U(16.W))
 
   //Display lighting shifting, so each display gets adequate time to
   //light up but also is perceived they are all on at the same time
@@ -40,14 +41,15 @@ class DisplayMultiplexer(maxCount: Int) extends Module {
   when(cntReg === CNT_MAX) {
     cntReg := 0.U
     outReg := outReg(0) ## outReg(3, 1)
+    outReg2 := io.hex
   }
   select := outReg
 
   //Connection decoders to input values.
-  sevenSegDec0.io.in := io.hex(3, 0)
-  sevenSegDec1.io.in := io.hex(7, 4)
-  sevenSegDec2.io.in := io.hex(11, 8)
-  sevenSegDec3.io.in := io.hex(15, 12)
+  sevenSegDec0.io.in := outReg2(3, 0)
+  sevenSegDec1.io.in := outReg2(7, 4)
+  sevenSegDec2.io.in := outReg2(11, 8)
+  sevenSegDec3.io.in := outReg2(15, 12)
 
   //Switch statement switching what data to send according to which display is currently displaying
   switch(select) {
