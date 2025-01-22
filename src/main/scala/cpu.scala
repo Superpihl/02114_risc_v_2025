@@ -16,18 +16,16 @@ class decodedInstr extends Bundle {
   val imm20 = UInt(20.W)
   val pc = UInt(32.W)
   val valid = Bool()
-  //val mem = Bool()
 }
 
 class cpu extends Module {
   val io = IO(new Bundle {
-    /*val instruct = Input(UInt(32.W))*/
     /*val test0 = Output(UInt(32.W))
     val test1 = Output(UInt(32.W))
     val test2 = Output(UInt(32.W))
     val test3 = Output(UInt(32.W))
     val test4 = Output(UInt(32.W))
-    val test5 = Output(UInt(32.W))
+    val test5 = Output(UInt(32.W)) \\ Scala Testing IO
     val test6 = Output(UInt(32.W))
     val test7 = Output(UInt(32.W))
     val test8 = Output(UInt(32.W))
@@ -44,6 +42,7 @@ class cpu extends Module {
     val sevSegNum = Output(UInt(16.W))
   })
 
+    // === 32 register creation === //
   val reg = SyncReadMem(32, UInt(32.W)) /*RegInit(VecInit(Seq.fill(32)(0.U(32.W)))) */
 
   val DataMem = Module(new memory())
@@ -58,8 +57,9 @@ class cpu extends Module {
     val sign = Bool()
     val valid = Bool()
   }
+  
+    // === Setup of instruction memory === //
   //val InstrcutionMem = VecInit(fetch.readBin("binfiles/LEDtest.bin").toIndexedSeq.map(_.S(32.W).asUInt))
-  //{0x10000293,0x06400513,0xfff50513,0x00a28023,0xfea04ce3,0x00150513,0x00258593,0x00150513,0x00b280a3,0xfe55cae3,0x00a00893,0x00000073}
   val array = new Array[Int](14)
   array(0) = 0x10000293
   array(1) = 0x0fc00313
@@ -76,9 +76,8 @@ class cpu extends Module {
   array(12) = 0x00a00893
   array(13) = 0x00000073
   val InstrcutionMem = VecInit(array.toIndexedSeq.map(_.S(32.W).asUInt))
-  /*def getProgramFix() = InstrcutionMem*/
-  /*val InstrcutionMem = RegInit(0.U.asTypeOf(decOut))*/
-  /*printf("mem: %x\n",InstrcutionMem(6))*/
+
+    // === Creation of modules and bundles of wires === //
   val decoder = Module(new decode())
   val decOut = Wire(new decodedInstr())
 
@@ -91,24 +90,20 @@ class cpu extends Module {
   val doBranch = WireDefault(false.B)
   val branchTarget = WireDefault(0.U)
 
+    // === PC counter === //
   val pcReg = RegInit(0.U(32.W).asUInt)
   val pcNext = Mux(doBranch, branchTarget, pcReg + 4.U)
   pcReg := pcNext
 
+    // === Instruction read === //
   val instr = InstrcutionMem(pcReg(31,2))
-
   val pcRegReg = RegNext(pcReg)
 
-  //printf("pc = %x , instr = %x\n",pcReg,instr)
-  printf("%x ",pcReg)
-
+    // === Instruction register (IF/ID) === //
   val instrReg = RegInit(0x00000033.U)
   instrReg := Mux(doBranch, 0x00000033.U, instr)
 
-  /*val rs1 = instr(19, 15)
-  val rs2 = instr(24, 20)
-  val rd = instr(11, 7)*/
-
+    // === Connection to decode module, input and output === //
   decoder.io.instr := instrReg
   decOut.opcode := instrReg(6,0)
   decOut.rs1 := decoder.io.rs1
@@ -120,21 +115,16 @@ class cpu extends Module {
   decOut.imm20 := decoder.io.imm20
   decOut.pc := pcRegReg
   decOut.valid := !doBranch
-  //decOut.mem := decoder.io.mem
 
-  /*printf("Decode =instr: %x, opcode: %x |",instrReg, decOut.opcode)*/
-  /*printf("(dec): rs1(%x) = %d, rs2(%x) = %d\n",decOut.rs1,reg(decOut.rs1),decOut.rs2,reg(decOut.rs2))*/
+    // === ID/EX register === //
   decExReg := decOut
 
+    // === Connection to execution module, input and output === //
   exe.io.opcode := decExReg.opcode
-
-  //printf("decExRS1 = %d (%x)\nmemRD = %d\nwbRD = %d\n",decExReg.rs1,reg(decExReg.rs1),memReg.rd,wbReg.rd)
-  
   exe.io.rs1 := Mux((memReg.rd === decExReg.rs1) && memReg.valid, memReg.regData,
     Mux((wbReg.rd === decExReg.rs1) && wbReg.valid, wbData,reg(decExReg.rs1)))
   exe.io.rs2 := Mux(memReg.rd === decExReg.rs2, memReg.regData,
     Mux(wbReg.rd === decExReg.rs2, wbData,reg(decExReg.rs2)))
-  //printf("rs1 = %d\n rs2 = %d\n", exe.io.rs1,exe.io.rs2)
   exe.io.rd := decExReg.rd
   exe.io.func3 := decExReg.func3
   exe.io.func10 := decExReg.func10
@@ -142,40 +132,25 @@ class cpu extends Module {
   exe.io.imm20 := decExReg.imm20
   exe.io.pc := decExReg.pc
 
-  /*when(exe.io.rd === 15.U){
-    printf("\n(exe) res = %x rs1(%x) = %x, (mem) = %x, (wbReg) = %x, (reg) = %x\n",exe.io.res,decExReg.rs1,exe.io.rs1,memReg.regData,wbData,reg(decExReg.rs1))
-  }*/
-
+    // === Branch calculations === //
   branchTarget := Mux(exe.io.opcode === 0x67.U,(exe.io.rs1.asSInt + decExReg.imm.asSInt).asUInt,(decExReg.pc.asSInt + Mux(exe.io.opcode === 0x17.U,decExReg.imm20.asSInt,decExReg.imm.asSInt)).asUInt)
   doBranch := exe.io.branch && decExReg.valid
-  /*when(doBranch){
-    printf("\nBranch Target: %x | pc: %x | imm : %x\n",branchTarget,decExReg.pc.asSInt,decExReg.imm.asSInt)
-    /*printf("branchTarget = %x, also that branch target = %x\n",(decExReg.pc.asSInt + decExReg.imm.asSInt).asUInt, exe.io.res)
-    when(exe.io.opcode === 0x63.U){
-      printf("definitely a branch branch\n")
-    }*/
+
+    // === Hex dump of registers at end of program === //
+  /*when(exe.io.opcode === 0x73.U){
+    printf("reg: \n%x\n%x\n%x\n%x\n%x\n%x\n%x\n%x\n%x\n%x\n%x\n%x\n%x\n%x\n%x\n%x\n%x\n%x\n%x\n%x\n%x\n%x\n%x\n%x\n%x\n%x\n%x\n%x\n%x\n%x\n%x\n%x",reg(0),reg(1),reg(2),reg(3),reg(4),reg(5),reg(6),reg(7),reg(8),reg(9),reg(10),reg(11),reg(12),reg(13),reg(14),reg(15),reg(16),reg(17),reg(18),reg(19),reg(20),reg(21),reg(22),reg(23),reg(24),reg(25),reg(26),reg(27),reg(28),reg(29),reg(30),reg(31))
   }*/
 
-  /*printf("(exe): rs1(%x) = %d, rs2(%x) = %d\n",decExReg.rs1,reg(decExReg.rs1),decExReg.rs2,reg(decExReg.rs2))*/
-  when(exe.io.opcode === 0x73.U){
-    printf("reg: \n%x\n%x\n%x\n%x\n%x\n%x\n%x\n%x\n%x\n%x\n%x\n%x\n%x\n%x\n%x\n%x\n%x\n%x\n%x\n%x\n%x\n%x\n%x\n%x\n%x\n%x\n%x\n%x\n%x\n%x\n%x\n%x",reg(0),reg(1),reg(2),reg(3),reg(4),reg(5),reg(6),reg(7),reg(8),reg(9),reg(10),reg(11),reg(12),reg(13),reg(14),reg(15),reg(16),reg(17),reg(18),reg(19),reg(20),reg(21),reg(22),reg(23),reg(24),reg(25),reg(26),reg(27),reg(28),reg(29),reg(30),reg(31))
-  }
-  /*printf("exe = opcode: %x, %x + %x = %x |",decExReg.opcode, reg(decExReg.rs1),reg(decExReg.rs2),reg(decExReg.rd))*/
+    // === EXE/MEM register === //
   memReg.regData := Mux(decExReg.valid,exe.io.res,0.U)
   memReg.rd := Mux(decExReg.valid,exe.io.rd,0.U)
-  /*when(memReg.rd === 15.U){
-    printf("regData = %x\n",memReg.regData)
-  }*/
   memReg.Addr := exe.io.rs1 + exe.io.imm
   memReg.memWr := ((exe.io.memLen > 0.U) & (exe.io.opcode === 0x23.U))
   memReg.Len :=  Mux(decExReg.valid,exe.io.memLen,0.U)
   memReg.sign := exe.io.sign
   memReg.valid := (exe.io.opcode =/= 0x63.U) && decExReg.valid
-  /*when(memReg.writeLen > 0.U){
-    printf("%x(addr) + %x(imm) = %d\n",exe.io.rs1,exe.io.imm,exe.io.res)
-  }*/
-    //printf("this: %d and (%d = %d\n",decExReg.valid,decExReg.opcode, 0x23.U)
-  //memReg.mem := decExReg.mem
+
+    // === Connection to Memory module, input and output === //
   DataMem.io.DataIn := memReg.regData
   DataMem.io.rd := memReg.rd
   DataMem.io.Addr := memReg.Addr
@@ -183,15 +158,12 @@ class cpu extends Module {
   DataMem.io.memWr := memReg.memWr
   DataMem.io.sign := memReg.sign
 
-  //printf("mem = memReg: %x\n",DataMem.io.DataOut)
+    // === MEM/WB register === //
   wbReg := memReg
   wbReg.memData := DataMem.io.DataOut
-  io.sevSegNum := DataMem.io.hex
+  io.sevSegNum := DataMem.io.hex // Seven segments display
 
-  /*when(wbReg.rd === 15.U){
-    printf("regData(wb) = %x\n",wbReg.regData)
-  }*/
-
+    // === Writeback === //
   when(!wbReg.memWr && wbReg.valid){
     when(wbReg.Len > 0.U){
       wbData := wbReg.memData
@@ -200,12 +172,11 @@ class cpu extends Module {
     }
     when(wbReg.rd === 0.U){ 
       wbData := 0.U
-      //printf("x%d = %x\n (%x(mem),%x(reg))\n",wbReg.rd,wbData,wbReg.memData,wbReg.regData)
     }
     reg(wbReg.rd) := wbData
   }
-  //printf("x%d = %x\n",wbReg.rd, wbReg.regData)
-  //printf("fail at %d\n", reg(wbReg.rd))
+
+    // === Register IO output === //
   /*io.test0 := reg(0)
   io.test1 := reg(1)
   io.test2 := reg(2)

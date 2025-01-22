@@ -20,14 +20,13 @@ class execution extends Module {
     val sign = Output(Bool())
   })
 
+    // === R type instructions === //
   def RType(func10: UInt, rs1: UInt, rs2: UInt): UInt = {
     val res = Wire(UInt(32.W))
     res := 0.U
-    /*printf("func10: &x\n",func10)*/
     switch(func10) {
       is(0x000.U) {/* add */
         res := rs1 + rs2
-        /*printf("%d + %d = %d\n", rs1,rs2,res)*/
       }
       is(0x100.U) {/* sub */
         res := rs1 - rs2
@@ -60,13 +59,13 @@ class execution extends Module {
     res
   }
 
+   // === Most I type instructions === //
   def IType(func3: UInt, rs1: UInt, imm: UInt): UInt = {
     val res = Wire(UInt(32.W))
     res := 0.U
     switch(func3) {
       is(0x00.U) {/* addi */
         res := (rs1.asSInt + imm.asSInt).asUInt
-        //printf("%x(rs1) + %x(imm) = %x(res)\n", rs1,imm.asSInt,res)
       }
       is(0x02.U) {/* slti */
         res := (rs1.asSInt < imm.asSInt).asUInt
@@ -97,6 +96,7 @@ class execution extends Module {
     res
   }
 
+    // === B type instructions === //
   def BType(func3: UInt, rs1: UInt, rs2: UInt): Bool = {
     val branch = Wire(Bool())
     branch := 0.U
@@ -109,7 +109,6 @@ class execution extends Module {
       }
       is(0x04.U) {/* blt */
         branch := rs1.asSInt < rs2.asSInt
-        //printf("rs1 = %d, rs2 = %d\n",rs1,rs2)
       }
       is(0x05.U) {/* bge */
         branch := rs1.asSInt >= rs2.asSInt
@@ -124,10 +123,13 @@ class execution extends Module {
     branch
   }
 
+    // === Default values === //
   io.res := 0.U
   io.branch := false.B
   io.memLen := 0.U
   io.sign := false.B
+
+    // === Main switch === //
   switch(io.opcode) {
     is(0x03.U) {/* I-type (Load)*/
       io.res := io.rs1 + io.imm
@@ -173,7 +175,6 @@ class execution extends Module {
           io.memLen := 3.U
         }
       }
-      //printf("Length = %d\n",io.memLen)
     }
     is(0x6F.U) {/* J-type (JAL) */
       io.res := io.pc + 4.U
@@ -181,10 +182,8 @@ class execution extends Module {
     }
     is(0x33.U) {/* R-type */
       io.res := RType(io.func10, io.rs1, io.rs2)
-      /*printf("%d + %d = %d\n",io.rs1,io.rs2,io.res)*/
     }
     is(0x37.U) {/* U-type (LUI) */
-      //printf("res = %x\n",io.imm20 << 12)
       io.res := io.imm20 << 12
     }
     is(0x63.U) {/* B-type */
@@ -196,7 +195,6 @@ class execution extends Module {
       io.branch := true.B
     }
     is(0x73.U){ /* Ecall & Ebreak */
-      //io.res := 0.U
       printf("\nEcall got damn\n")
     }
   }
