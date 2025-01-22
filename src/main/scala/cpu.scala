@@ -58,7 +58,24 @@ class cpu extends Module {
     val sign = Bool()
     val valid = Bool()
   }
-  val InstrcutionMem = VecInit(fetch.readBin("binfiles/LEDtest.bin").toIndexedSeq.map(_.S(32.W).asUInt))
+  //val InstrcutionMem = VecInit(fetch.readBin("binfiles/LEDtest.bin").toIndexedSeq.map(_.S(32.W).asUInt))
+  //{0x10000293,0x06400513,0xfff50513,0x00a28023,0xfea04ce3,0x00150513,0x00258593,0x00150513,0x00b280a3,0xfe55cae3,0x00a00893,0x00000073}
+  val array = new Array[Int](14)
+  array(0) = 0x10000293
+  array(1) = 0x0fc00313
+  array(2) = 0x06400513
+  array(3) = 0xfff50513
+  array(4) = 0x00a28023
+  array(5) = 0xfea04ce3
+  array(6) = 0x00150513
+  array(7) = 0x00258593
+  array(8) = 0x00150513
+  array(9) = 0x00a28023
+  array(10) = 0x00b280a3
+  array(11) = 0xfe65c8e3
+  array(12) = 0x00a00893
+  array(13) = 0x00000073
+  val InstrcutionMem = VecInit(array.toIndexedSeq.map(_.S(32.W).asUInt))
   /*def getProgramFix() = InstrcutionMem*/
   /*val InstrcutionMem = RegInit(0.U.asTypeOf(decOut))*/
   /*printf("mem: %x\n",InstrcutionMem(6))*/
@@ -112,7 +129,7 @@ class cpu extends Module {
   exe.io.opcode := decExReg.opcode
 
   //printf("decExRS1 = %d (%x)\nmemRD = %d\nwbRD = %d\n",decExReg.rs1,reg(decExReg.rs1),memReg.rd,wbReg.rd)
-
+  
   exe.io.rs1 := Mux((memReg.rd === decExReg.rs1) && memReg.valid, memReg.regData,
     Mux((wbReg.rd === decExReg.rs1) && wbReg.valid, wbData,reg(decExReg.rs1)))
   exe.io.rs2 := Mux(memReg.rd === decExReg.rs2, memReg.regData,

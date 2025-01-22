@@ -109,6 +109,7 @@ class execution extends Module {
       }
       is(0x04.U) {/* blt */
         branch := rs1.asSInt < rs2.asSInt
+        //printf("rs1 = %d, rs2 = %d\n",rs1,rs2)
       }
       is(0x05.U) {/* bge */
         branch := rs1.asSInt >= rs2.asSInt
