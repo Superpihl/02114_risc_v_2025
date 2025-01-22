@@ -4,13 +4,15 @@ import chisel3._
 import chiseltest._
 import org.scalatest.flatspec.AnyFlatSpec
 
-class decodeTest extends AnyFlatSpec with ChiselScalatestTester {
+class binTester extends AnyFlatSpec with ChiselScalatestTester {
   "Decoder" should "pass" in {
     test(new cpu).withAnnotations(Seq(WriteVcdAnnotation)) { dut =>
       println("damn")
       dut.clock.setTimeout(3000)
 
       dut.clock.step(20)
+
+        // === Detailed recursive.bit Test === //
 
       /*dut.clock.step(5)
       dut.io.test2.expect(0x1000.U)
@@ -115,9 +117,9 @@ class decodeTest extends AnyFlatSpec with ChiselScalatestTester {
       dut.io.test15.expect(0x65.U)
       dut.io.test17.expect(0xa.U)*/
       
-      /*width.bin
+        // === Detailed width.bit Test === //
       
-      dut.clock.step(4)
+      /*dut.clock.step(4)
       dut.io.test5.expect(0.U)
       dut.io.test6.expect(0.U)
       dut.io.test11.expect(0.U)

@@ -77,7 +77,8 @@ class decode extends Module {
       io.func3 := io.instr(14,12)
       io.rs1 := io.instr(19,15)
       io.imm := io.instr(31,20)
-    }is(0x73.U){ /* Ecall & Ebreak */
+    }
+    is(0x73.U){ /* Ecall & Ebreak */
 
     }
   }
