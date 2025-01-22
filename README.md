@@ -1,5 +1,3 @@
-# chisel-empty
+# 02114 Design of RISC-V processors
 
-An almost empty chisel project as a starting point for hardware design.
-
-See the `Makefile` for the hardware and test targets.
+The project of group 2 in DTU course 02114 
