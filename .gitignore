@@ -6,3 +6,4 @@
 .DS_Store
 /test_run_dir
 connection.fir
+connection.anno.json

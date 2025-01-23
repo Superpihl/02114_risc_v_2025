@@ -25,7 +25,7 @@ class cpu extends Module {
     val test2 = Output(UInt(32.W))
     val test3 = Output(UInt(32.W))
     val test4 = Output(UInt(32.W))
-    val test5 = Output(UInt(32.W)) \\ Scala Testing IO
+    val test5 = Output(UInt(32.W)) // Scala Testing IO
     val test6 = Output(UInt(32.W))
     val test7 = Output(UInt(32.W))
     val test8 = Output(UInt(32.W))
@@ -40,10 +40,12 @@ class cpu extends Module {
     val test17 = Output(UInt(32.W))*/
 
     val sevSegNum = Output(UInt(16.W))
+    val instr = Output(UInt(32.W))
+    val pc = Output(UInt(32.W))
   })
 
     // === 32 register creation === //
-  val reg = SyncReadMem(32, UInt(32.W)) /*RegInit(VecInit(Seq.fill(32)(0.U(32.W)))) */
+  val reg = /*SyncReadMem(32, UInt(32.W))*/ RegInit(VecInit(Seq.fill(32)(0.U(32.W))))
 
   val DataMem = Module(new memory())
   DataMem.io.Length := 0.U
@@ -59,19 +61,19 @@ class cpu extends Module {
   }
   
     // === Setup of instruction memory === //
-  //val InstrcutionMem = VecInit(fetch.readBin("binfiles/LEDtest.bin").toIndexedSeq.map(_.S(32.W).asUInt))
+  //val InstrcutionMem = VecInit(fetch.readBin("binfiles/recursive(nopAfterLoad).bin").toIndexedSeq.map(_.S(32.W).asUInt))
   val array = new Array[Int](14)
   array(0) = 0x10000293
   array(1) = 0x0fc00313
   array(2) = 0x06400513
   array(3) = 0xfff50513
-  array(4) = 0x00a28023
+  array(4) = 0x00a280a3
   array(5) = 0xfea04ce3
   array(6) = 0x00150513
   array(7) = 0x00258593
   array(8) = 0x00150513
-  array(9) = 0x00a28023
-  array(10) = 0x00b280a3
+  array(9) = 0x00a280a3
+  array(10) = 0x00b28123
   array(11) = 0xfe65c8e3
   array(12) = 0x00a00893
   array(13) = 0x00000073
@@ -90,18 +92,54 @@ class cpu extends Module {
   val doBranch = WireDefault(false.B)
   val branchTarget = WireDefault(0.U)
 
+  val CNT_MAX = (100000000 / 2 - 1).U
+  
+  val cntReg = RegInit(0.U(32.W))
+  val pcRegReg = RegInit(0.U(32.W).asUInt)
+
+
     // === PC counter === //
   val pcReg = RegInit(0.U(32.W).asUInt)
-  val pcNext = Mux(doBranch, branchTarget, pcReg + 4.U)
-  pcReg := pcNext
-
-    // === Instruction read === //
-  val instr = InstrcutionMem(pcReg(31,2))
-  val pcRegReg = RegNext(pcReg)
-
-    // === Instruction register (IF/ID) === //
   val instrReg = RegInit(0x00000033.U)
-  instrReg := Mux(doBranch, 0x00000033.U, instr)
+
+  cntReg := cntReg + 1.U
+  when(cntReg === CNT_MAX) {
+    cntReg := 0.U
+
+    
+    val pcNext = Mux(doBranch, branchTarget, pcReg + 4.U)
+    pcReg := pcNext
+    pcRegReg := pcReg
+
+    
+
+      // === Instruction read === //
+    val instr = InstrcutionMem(pcReg(31,2))
+       
+        // === Instruction register (IF/ID) === //
+    instrReg := Mux(doBranch, 0x00000033.U, instr)
+  
+      // === ID/EX register === //
+    decExReg := decOut
+
+      // === EXE/MEM register === //
+    memReg.regData := Mux(decExReg.valid,exe.io.res,0.U)
+    memReg.rd := Mux(decExReg.valid,exe.io.rd,0.U)
+    memReg.Addr := exe.io.rs1 + exe.io.imm
+    memReg.memWr := ((exe.io.memLen > 0.U) & (exe.io.opcode === 0x23.U))
+    memReg.Len :=  Mux(decExReg.valid,exe.io.memLen,0.U)
+    memReg.sign := exe.io.sign
+    memReg.valid := (exe.io.opcode =/= 0x63.U) && decExReg.valid
+
+        // === MEM/WB register === //
+    wbReg := memReg
+    wbReg.memData := DataMem.io.DataOut
+  }
+
+    // === Seven segement display === //
+  io.sevSegNum := DataMem.io.hex
+  io.instr := instrReg
+  io.pc := pcReg
 
     // === Connection to decode module, input and output === //
   decoder.io.instr := instrReg
@@ -116,12 +154,9 @@ class cpu extends Module {
   decOut.pc := pcRegReg
   decOut.valid := !doBranch
 
-    // === ID/EX register === //
-  decExReg := decOut
-
     // === Connection to execution module, input and output === //
   exe.io.opcode := decExReg.opcode
-  exe.io.rs1 := Mux((memReg.rd === decExReg.rs1) && memReg.valid, memReg.regData,
+  exe.io.rs1 := Mux((memReg.rd === decExReg.rs1) && memReg.valid && !memReg.memWr, memReg.regData,
     Mux((wbReg.rd === decExReg.rs1) && wbReg.valid, wbData,reg(decExReg.rs1)))
   exe.io.rs2 := Mux(memReg.rd === decExReg.rs2, memReg.regData,
     Mux(wbReg.rd === decExReg.rs2, wbData,reg(decExReg.rs2)))
@@ -141,15 +176,6 @@ class cpu extends Module {
     printf("reg: \n%x\n%x\n%x\n%x\n%x\n%x\n%x\n%x\n%x\n%x\n%x\n%x\n%x\n%x\n%x\n%x\n%x\n%x\n%x\n%x\n%x\n%x\n%x\n%x\n%x\n%x\n%x\n%x\n%x\n%x\n%x\n%x",reg(0),reg(1),reg(2),reg(3),reg(4),reg(5),reg(6),reg(7),reg(8),reg(9),reg(10),reg(11),reg(12),reg(13),reg(14),reg(15),reg(16),reg(17),reg(18),reg(19),reg(20),reg(21),reg(22),reg(23),reg(24),reg(25),reg(26),reg(27),reg(28),reg(29),reg(30),reg(31))
   }*/
 
-    // === EXE/MEM register === //
-  memReg.regData := Mux(decExReg.valid,exe.io.res,0.U)
-  memReg.rd := Mux(decExReg.valid,exe.io.rd,0.U)
-  memReg.Addr := exe.io.rs1 + exe.io.imm
-  memReg.memWr := ((exe.io.memLen > 0.U) & (exe.io.opcode === 0x23.U))
-  memReg.Len :=  Mux(decExReg.valid,exe.io.memLen,0.U)
-  memReg.sign := exe.io.sign
-  memReg.valid := (exe.io.opcode =/= 0x63.U) && decExReg.valid
-
     // === Connection to Memory module, input and output === //
   DataMem.io.DataIn := memReg.regData
   DataMem.io.rd := memReg.rd
@@ -157,11 +183,6 @@ class cpu extends Module {
   DataMem.io.Length := memReg.Len
   DataMem.io.memWr := memReg.memWr
   DataMem.io.sign := memReg.sign
-
-    // === MEM/WB register === //
-  wbReg := memReg
-  wbReg.memData := DataMem.io.DataOut
-  io.sevSegNum := DataMem.io.hex // Seven segments display
 
     // === Writeback === //
   when(!wbReg.memWr && wbReg.valid){
