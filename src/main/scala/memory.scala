@@ -21,7 +21,6 @@ class memory extends Module {
   val DataMemory = SyncReadMem(memSize+2, UInt(8.W)) /*RegInit(VecInit(Seq.fill(memSize)(0.U(8.W)))) */
 
   val tempOut = VecInit(Seq.fill(4)(0.U(8.W)))
-  val tempSeg = VecInit(Seq.fill(2)(0.U(8.W)))
 
     // === Memory read/write based on length of memory access (0 = no read or write, 1 = byte, 2 = half word, 3 = full word) === //
   when(0.U < io.Length){
@@ -49,7 +48,7 @@ class memory extends Module {
   }
 
     // === Output === //
-  io.hex := DataMemory((memSize+1).U) ## tempSeg(memSize.U) // Seven segments display
+  io.hex := DataMemory((memSize+1).U) ## DataMemory(memSize.U) // Seven segments display
 
     // === DataOut with sign extension === //
   when(io.Length === 1.U && !io.sign && (tempOut(0) & 0x80.U) === 0x80.U){

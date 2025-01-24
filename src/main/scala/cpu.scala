@@ -67,13 +67,13 @@ class cpu extends Module {
   array(1) = 0x0fc00313
   array(2) = 0x06400513
   array(3) = 0xfff50513
-  array(4) = 0x00a280a3
+  array(4) = 0x00a28023
   array(5) = 0xfea04ce3
   array(6) = 0x00150513
   array(7) = 0x00258593
   array(8) = 0x00150513
-  array(9) = 0x00a280a3
-  array(10) = 0x00b28123
+  array(9) = 0x00a28023
+  array(10) = 0x00b280a3
   array(11) = 0xfe65c8e3
   array(12) = 0x00a00893
   array(13) = 0x00000073
